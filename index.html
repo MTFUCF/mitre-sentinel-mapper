@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Static ATT&CK-to-KQL study map for Microsoft Sentinel and Defender XDR detection thinking."
+    />
+    <title>MITRE Sentinel Mapper</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="app-header">
+        <div class="header-top">
+          <div class="header-title">
+            <h1>MITRE Sentinel Mapper</h1>
+            <p>
+              Search ATT&amp;CK techniques, review starter KQL, and compare which telemetry sources fit each example.
+            </p>
+          </div>
+          <div class="header-controls">
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">Dark mode</button>
+          </div>
+        </div>
+
+        <p class="hero-note">
+          ⚠️ Examples are illustrative — tune for your environment before production use. See each technique's caveat.
+        </p>
+
+        <section class="toolbar" aria-label="Search and filters">
+          <div class="control-group">
+            <label for="search-input">Search technique ID, name, or KQL</label>
+            <input
+              id="search-input"
+              class="search-input"
+              type="search"
+              placeholder="Search T1059, phishing, powershell -enc..."
+              autocomplete="off"
+            />
+          </div>
+          <div class="control-group">
+            <label for="tactic-filter">Filter by tactic</label>
+            <select id="tactic-filter" class="filter-select"></select>
+          </div>
+          <div class="control-group">
+            <label for="log-source-filter">Filter by platform / log source</label>
+            <select id="log-source-filter" class="filter-select"></select>
+          </div>
+        </section>
+      </header>
+
+      <main class="app-main">
+        <aside class="sidebar" aria-labelledby="technique-list-heading">
+          <div class="sidebar-header">
+            <h2 id="technique-list-heading">Techniques</h2>
+            <p id="result-count">Loading…</p>
+          </div>
+          <ul class="technique-list" id="technique-list"></ul>
+        </aside>
+
+        <section class="detail-panel" id="detail-panel" tabindex="-1" aria-label="Selected technique detail">
+          <div class="empty-detail">
+            <h2>Loading technique details…</h2>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        Built by Matthew Faber ·
+        <a href="https://github.com/matthewfaber/mitre-sentinel-mapper" target="_blank" rel="noreferrer">source</a>
+      </footer>
+    </div>
+
+    <div class="sr-only" id="app-status" aria-live="polite"></div>
+    <script src="./src/app.js" defer></script>
+  </body>
+</html>

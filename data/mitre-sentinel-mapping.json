@@ -1,0 +1,281 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "date_created": "2026-05-16",
+    "description": "MITRE ATT&CK techniques mapped to KQL detection examples for Microsoft Sentinel and Defender XDR",
+    "total_mappings": 27,
+    "caveat": "KQL examples are templates for learning; production queries should include additional tuning, exclusions, and threshold testing"
+  },
+  "kql_detections": [
+    {
+      "id": "mapping-001",
+      "technique_id": "T1566",
+      "technique_name": "Phishing",
+      "tactic": "Initial Access",
+      "kql_example": "EmailEvents | where Subject contains \"Urgent\" and Subject contains \"Verify\" and FileName has_any (\".zip\", \".exe\", \".scr\") | summarize count() by SenderFromAddress, Subject, Timestamp",
+      "kql_caveat": "May produce false positives on legitimate urgent emails; refine with sender domain reputation and URL inspection.",
+      "source_url": "https://attack.mitre.org/techniques/T1566/",
+      "table_reference": "EmailEvents (Defender for Office 365)"
+    },
+    {
+      "id": "mapping-002",
+      "technique_id": "T1059",
+      "technique_name": "Command and Scripting Interpreter",
+      "tactic": "Execution",
+      "kql_example": "DeviceProcessEvents | where ProcessCommandLine contains_any (\"powershell -enc\", \"cmd.exe /c\", \"powershell.exe -nop\") and InitiatingProcessFileName != \"explorer.exe\" | project DeviceName, ProcessCommandLine, Timestamp",
+      "kql_caveat": "High entropy obfuscation may evade simple string matching; use YARA rules or ML-based detection for advanced evasion.",
+      "source_url": "https://attack.mitre.org/techniques/T1059/",
+      "table_reference": "DeviceProcessEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-003",
+      "technique_id": "T1098",
+      "technique_name": "Account Manipulation",
+      "tactic": "Persistence",
+      "kql_example": "AuditLogs | where OperationName == \"Add member to group\" and TargetResources[0].displayName has \"admin\" | extend UserId = tostring(InitiatedBy.user.id) | project Timestamp, UserId, OperationName, TargetResources",
+      "kql_caveat": "Legitimate admins add members frequently; requires baseline of normal admin activity and comparison to detect anomalies.",
+      "source_url": "https://attack.mitre.org/techniques/T1098/",
+      "table_reference": "AuditLogs (Entra ID)"
+    },
+    {
+      "id": "mapping-004",
+      "technique_id": "T1547",
+      "technique_name": "Boot or Logon Autostart Execution",
+      "tactic": "Persistence, Privilege Escalation",
+      "kql_example": "DeviceRegistryEvents | where RegistryKey contains_any (\"Run\", \"RunOnce\", \"Services\") and RegistryValueName !in (\"Windows Defender\", \"Windows Update\") | project DeviceName, RegistryKey, RegistryValueName, RegistryValueData, Timestamp",
+      "kql_caveat": "Many legitimate apps use Run/RunOnce; whitelist known-good processes and monitor for anomalous binary paths.",
+      "source_url": "https://attack.mitre.org/techniques/T1547/",
+      "table_reference": "DeviceRegistryEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-005",
+      "technique_id": "T1548",
+      "technique_name": "Abuse Elevation Control Mechanism",
+      "tactic": "Privilege Escalation, Defense Evasion",
+      "kql_example": "DeviceProcessEvents | where ProcessCommandLine contains_any (\"runas /user:\", \"UAC\", \"DLL hijacking\") or InitiatingProcessParentFileName in (\"consent.exe\", \"eventviewer.exe\") | project DeviceName, ProcessCommandLine, InitiatingProcessFileName, Timestamp",
+      "kql_caveat": "UAC bypass techniques vary; correlate with Defender alerts and device isolation events for confirmation.",
+      "source_url": "https://attack.mitre.org/techniques/T1548/",
+      "table_reference": "DeviceProcessEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-006",
+      "technique_id": "T1110",
+      "technique_name": "Brute Force",
+      "tactic": "Credential Access",
+      "kql_example": "SigninLogs | where ResultType == \"50058\" or ResultType == \"50076\" | summarize FailedAttempts = count() by UserPrincipalName, IPAddress, bin(Timestamp, 5m) | where FailedAttempts > 5",
+      "kql_caveat": "May trigger on users with fat-finger password errors; correlate with threat intelligence and impossible travel to increase confidence.",
+      "source_url": "https://attack.mitre.org/techniques/T1110/",
+      "table_reference": "SigninLogs (Entra ID)"
+    },
+    {
+      "id": "mapping-007",
+      "technique_id": "T1087",
+      "technique_name": "Account Discovery",
+      "tactic": "Discovery",
+      "kql_example": "AuditLogs | where OperationName has_any (\"List users\", \"Get user\", \"Enumerate members\") | summarize Discoveries = count() by InitiatedBy.user.userPrincipalName, bin(Timestamp, 10m) | where Discoveries > 20",
+      "kql_caveat": "Help desk and service account enumeration is normal; baseline legitimate discovery patterns to detect anomalies.",
+      "source_url": "https://attack.mitre.org/techniques/T1087/",
+      "table_reference": "AuditLogs (Entra ID)"
+    },
+    {
+      "id": "mapping-008",
+      "technique_id": "T1021",
+      "technique_name": "Remote Service Session Initiation",
+      "tactic": "Lateral Movement",
+      "kql_example": "DeviceNetworkEvents | where RemotePort in (3389, 22, 5985, 445) and InitiatingProcessName !in (\"explorer.exe\", \"svchost.exe\") | project DeviceName, RemoteIP, RemotePort, InitiatingProcessName, Timestamp",
+      "kql_caveat": "RDP and SSH are legitimate for admin activity; filter by business hours, geography, and known bastion hosts.",
+      "source_url": "https://attack.mitre.org/techniques/T1021/",
+      "table_reference": "DeviceNetworkEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-009",
+      "technique_id": "T1557",
+      "technique_name": "Adversary-in-the-Middle",
+      "tactic": "Collection",
+      "kql_example": "DeviceNetworkEvents | where Protocol == \"http\" and RemoteIP != \"192.168.1.0/24\" | project DeviceName, RemoteIP, RemotePort, ActionType, Timestamp | where ActionType == \"InboundConnectionAccepted\"",
+      "kql_caveat": "Requires network context; combine with DNS sinkhole data and TLS certificate mismatches for higher confidence.",
+      "source_url": "https://attack.mitre.org/techniques/T1557/",
+      "table_reference": "DeviceNetworkEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-010",
+      "technique_id": "T1041",
+      "technique_name": "Exfiltration Over C2 Channel",
+      "tactic": "Exfiltration",
+      "kql_example": "DeviceNetworkEvents | where RemoteIP not in (\"trusted_ip_range\") and TotalBytesSent > TotalBytesReceived * 5 | project DeviceName, RemoteIP, TotalBytesSent, InitiatingProcessName, Timestamp",
+      "kql_caveat": "Legitimate backup and sync tools send large amounts of data; establish baseline data transfer patterns per device and application.",
+      "source_url": "https://attack.mitre.org/techniques/T1041/",
+      "table_reference": "DeviceNetworkEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-011",
+      "technique_id": "T1071",
+      "technique_name": "Application Layer Protocol",
+      "tactic": "Command and Control",
+      "kql_example": "SecurityEvent | where EventID == 5156 and DestinationPort in (80, 443, 8080, 8443) and Application not contains \"Chrome\" and Application not contains \"Firefox\" | project Computer, Application, Destination IP, Timestamp",
+      "kql_caveat": "Many legitimate apps use HTTP/HTTPS; correlate with certificate analysis, YARA rules, and payload inspection.",
+      "source_url": "https://attack.mitre.org/techniques/T1071/",
+      "table_reference": "SecurityEvent (Windows Event Log)"
+    },
+    {
+      "id": "mapping-012",
+      "technique_id": "T1562",
+      "technique_name": "Impair Defenses",
+      "tactic": "Defense Evasion",
+      "kql_example": "SecurityEvent | where EventID == 4689 and CommandLine contains_any (\"taskkill /im defender\", \"Set-MpPreference -DisableRealtimeMonitoring\") | project Computer, CommandLine, Timestamp",
+      "kql_caveat": "Noisy; filter on non-admin processes and correlate with other suspicious activity.",
+      "source_url": "https://attack.mitre.org/techniques/T1562/",
+      "table_reference": "SecurityEvent (Windows Event Log)"
+    },
+    {
+      "id": "mapping-013",
+      "technique_id": "T1140",
+      "technique_name": "Deobfuscate/Decode Files or Information",
+      "tactic": "Defense Evasion",
+      "kql_example": "DeviceProcessEvents | where ProcessCommandLine contains_any (\"certutil -decode\", \"base64 -d\", \"powershell -enc\") | project DeviceName, ProcessCommandLine, InitiatingProcessFileName, Timestamp",
+      "kql_caveat": "Legitimate IT operations use certutil for certificates; require unusual script hosts or suspicious payloads.",
+      "source_url": "https://attack.mitre.org/techniques/T1140/",
+      "table_reference": "DeviceProcessEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-014",
+      "technique_id": "T1222",
+      "technique_name": "File and Directory Permissions Modification",
+      "tactic": "Defense Evasion",
+      "kql_example": "DeviceFileEvents | where FileName in (\"icacls.exe\", \"takeown.exe\") and InitiatingProcessParentFileName !in (\"explorer.exe\", \"cmd.exe\") | project DeviceName, FileName, InitiatingProcessFileName, Timestamp",
+      "kql_caveat": "System administrators frequently modify permissions; require non-admin context or unusual target directories.",
+      "source_url": "https://attack.mitre.org/techniques/T1222/",
+      "table_reference": "DeviceFileEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-015",
+      "technique_id": "T1555",
+      "technique_name": "Credentials from Password Stores",
+      "tactic": "Credential Access",
+      "kql_example": "DeviceProcessEvents | where ProcessCommandLine contains_any (\"lsass.exe\", \"mimikatz\", \"hashdump\", \"Get-Process lsass\") | project DeviceName, ProcessCommandLine, InitiatingProcessFileName, Timestamp",
+      "kql_caveat": "Legitimate forensic tools may trigger false positives; require correlation with other persistence/lateral movement indicators.",
+      "source_url": "https://attack.mitre.org/techniques/T1555/",
+      "table_reference": "DeviceProcessEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-016",
+      "technique_id": "T1187",
+      "technique_name": "Forced Phishing",
+      "tactic": "Credential Access",
+      "kql_example": "SecurityAlert | where Title contains \"Phishing\" or Title contains \"BEC\" | project Title, AlertName, ResourceIdentifiers, Timestamp | where Timestamp > ago(1h)",
+      "kql_caveat": "Sentinel alerts vary in quality; manually validate and establish feedback loops with email team.",
+      "source_url": "https://attack.mitre.org/techniques/T1187/",
+      "table_reference": "SecurityAlert (Sentinel)"
+    },
+    {
+      "id": "mapping-017",
+      "technique_id": "T1056",
+      "technique_name": "Input Capture",
+      "tactic": "Credential Access",
+      "kql_example": "DeviceProcessEvents | where ProcessCommandLine contains_any (\"keylog\", \"key?logger\", \"inputremapping\") or FileName in (\"iexplore.exe\", \"chrome.exe\") and InitiatingProcessFileName in (\"powershell.exe\", \"cmd.exe\") | project DeviceName, ProcessCommandLine, Timestamp",
+      "kql_caveat": "High false positive rate; correlate with malware hash, certificate signing, and installation sources.",
+      "source_url": "https://attack.mitre.org/techniques/T1056/",
+      "table_reference": "DeviceProcessEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-018",
+      "technique_id": "T1210",
+      "technique_name": "Exploitation of Remote Services",
+      "tactic": "Lateral Movement",
+      "kql_example": "DeviceNetworkEvents | where RemotePort in (445, 3389, 5985) and ActionType == \"InboundConnectionAccepted\" and RemoteIP not in (\"corp_bastion_ips\") | project DeviceName, RemoteIP, RemotePort, Timestamp",
+      "kql_caveat": "Requires network baseline; combine with vulnerability scan data to identify unpatched systems.",
+      "source_url": "https://attack.mitre.org/techniques/T1210/",
+      "table_reference": "DeviceNetworkEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-019",
+      "technique_id": "T1570",
+      "technique_name": "Lateral Tool Transfer",
+      "tactic": "Lateral Movement",
+      "kql_example": "DeviceFileEvents | where FileName in (\"mimikatz.exe\", \"procdump.exe\", \"psexec.exe\") and InitiatingProcessParentFileName !in (\"explorer.exe\", \"svchost.exe\") | project DeviceName, FileName, Timestamp",
+      "kql_caveat": "False positives from legitimate pen testing; require correlation with C2 beacons or credential theft indicators.",
+      "source_url": "https://attack.mitre.org/techniques/T1570/",
+      "table_reference": "DeviceFileEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-020",
+      "technique_id": "T1123",
+      "technique_name": "Audio Capture",
+      "tactic": "Collection",
+      "kql_example": "DeviceProcessEvents | where ProcessCommandLine contains_any (\"mciSendString\", \"waveOutOpen\", \"audioapis\") and InitiatingProcessFileName !in (\"skype.exe\", \"teams.exe\", \"zoom.exe\") | project DeviceName, ProcessCommandLine, Timestamp",
+      "kql_caveat": "Many legitimate communication apps access audio; filter by unexpected process names and paths.",
+      "source_url": "https://attack.mitre.org/techniques/T1123/",
+      "table_reference": "DeviceProcessEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-021",
+      "technique_id": "T1119",
+      "technique_name": "Automated Exfiltration",
+      "tactic": "Exfiltration",
+      "kql_example": "DeviceNetworkEvents | where TotalBytesSent > 1000000 and RemoteIP != \"internal_ip_range\" and InitiatingProcessFileName not in (\"outlook.exe\", \"teams.exe\") | project DeviceName, RemoteIP, TotalBytesSent, InitiatingProcessFileName, Timestamp",
+      "kql_caveat": "Legitimate cloud sync and backup tools transfer large volumes; baseline by application and user.",
+      "source_url": "https://attack.mitre.org/techniques/T1119/",
+      "table_reference": "DeviceNetworkEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-022",
+      "technique_id": "T1048",
+      "technique_name": "Exfiltration Over Alternative Protocol",
+      "tactic": "Exfiltration",
+      "kql_example": "DeviceNetworkEvents | where Protocol == \"udp\" and RemotePort in (53, 123, 161) and TotalBytesSent > TotalBytesReceived * 3 | project DeviceName, RemoteIP, RemotePort, Protocol, TotalBytesSent, Timestamp",
+      "kql_caveat": "DNS and NTP carry legitimate traffic; requires pattern analysis and payload inspection to detect exfiltration.",
+      "source_url": "https://attack.mitre.org/techniques/T1048/",
+      "table_reference": "DeviceNetworkEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-023",
+      "technique_id": "T1078",
+      "technique_name": "Valid Accounts",
+      "tactic": "Initial Access, Persistence, Privilege Escalation, Defense Evasion",
+      "kql_example": "SigninLogs | where ResultType == 0 and UserPrincipalName contains \"@\" and LocationDetails.countryOrRegion != \"US\" | summarize SigninCount = count() by UserPrincipalName, LocationDetails.countryOrRegion, bin(Timestamp, 1h) | where SigninCount > 5",
+      "kql_caveat": "Legitimate travel and VPN use may trigger; establish geographic baselines per user.",
+      "source_url": "https://attack.mitre.org/techniques/T1078/",
+      "table_reference": "SigninLogs (Entra ID)"
+    },
+    {
+      "id": "mapping-024",
+      "technique_id": "T1547.014",
+      "technique_name": "Boot or Logon Autostart Execution - Winlogon Helper DLL",
+      "tactic": "Persistence, Privilege Escalation",
+      "kql_example": "DeviceRegistryEvents | where RegistryKey contains \"\\\\Control Panel\\\\Lsa\" and (RegistryValueName contains \"Notification Packages\" or RegistryValueName contains \"AppSetup\") | project DeviceName, RegistryValueData, Timestamp",
+      "kql_caveat": "Rare technique; correlate with file creation in System32 and unsigned DLL analysis.",
+      "source_url": "https://attack.mitre.org/techniques/T1547/014/",
+      "table_reference": "DeviceRegistryEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-025",
+      "technique_id": "T1486",
+      "technique_name": "Data Encrypted for Impact",
+      "tactic": "Impact",
+      "kql_example": "DeviceFileEvents | where FileName endswith_any (\".locked\", \".encrypted\", \".conti\", \".lockbit\", \".ransom\") | summarize EncryptedCount = count() by DeviceName, InitiatingProcessFileName, bin(Timestamp, 5m) | where EncryptedCount > 10",
+      "kql_caveat": "High signal quality; immediately isolate device and preserve forensics.",
+      "source_url": "https://attack.mitre.org/techniques/T1486/",
+      "table_reference": "DeviceFileEvents (Defender for Endpoint)"
+    },
+    {
+      "id": "mapping-026",
+      "technique_id": "T1490",
+      "technique_name": "Inhibit System Recovery",
+      "tactic": "Impact",
+      "kql_example": "SecurityEvent | where EventID == 4688 and CommandLine contains_any (\"vssadmin delete shadows\", \"cipher /w:\", \"wmic shadowcopy delete\") | project Computer, CommandLine, Timestamp",
+      "kql_caveat": "Highly indicative of ransomware; immediate response recommended.",
+      "source_url": "https://attack.mitre.org/techniques/T1490/",
+      "table_reference": "SecurityEvent (Windows Event Log)"
+    },
+    {
+      "id": "mapping-027",
+      "technique_id": "T1005",
+      "technique_name": "Data from Local System",
+      "tactic": "Collection",
+      "kql_example": "DeviceFileEvents | where InitiatingProcessFileName in (\"cmd.exe\", \"powershell.exe\", \"bash\") and FileName endswith_any (\".docx\", \".pptx\", \".xlsx\", \".pdf\") | project DeviceName, FileName, InitiatingProcessFileName, Timestamp",
+      "kql_caveat": "High false positive rate from normal user work; correlate with exfiltration events to confirm intent.",
+      "source_url": "https://attack.mitre.org/techniques/T1005/",
+      "table_reference": "DeviceFileEvents (Defender for Endpoint)"
+    }
+  ]
+}
