@@ -137,6 +137,6 @@ This repo includes `.github/workflows/deploy-pages.yml` for the modern GitHub-na
 ## Author
 
 **Matthew Faber**  
-Matthew Faber builds hands-on cybersecurity portfolio projects that turn study material into recruiter-friendly demos.
+Matthew Faber builds hands-on cybersecurity portfolio projects.
 
 
