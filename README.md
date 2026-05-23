@@ -15,7 +15,7 @@ MITRE Sentinel Mapper is a buildless static app that maps ATT&CK techniques to s
 
 ## Live demo
 
-https://matthewfaber.github.io/mitre-sentinel-mapper/
+https://mtfucf.github.io/mitre-sentinel-mapper/
 
 ## Screenshot
 
